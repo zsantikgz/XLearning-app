@@ -17,6 +17,9 @@ app.use(express.json());
 const authRoutes = require('./routes/authRoutes');
 const usuarioRoutes = require('./routes/usuarioRoutes');
 
+// RUTAS DE AUTENTICACION
+app.use('/api/auth', authRoutes);
+
 // Rutas base
 app.use('/api/auth', authRoutes);
 app.use('/api/usuarios', usuarioRoutes);
