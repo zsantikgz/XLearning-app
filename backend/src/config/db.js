@@ -3,7 +3,7 @@ const { connectionString } = require('pg/lib/defaults.js');
 require('dotenv').config();
 
 const pool = new Pool({
-    connectionString: ProcessingInstruction.env.DATABASE_URL,
+    connectionString: process.env.DATABASE_URL,
     ssl: {
         rejectUnauthorized: false
     },
@@ -13,8 +13,8 @@ const pool = new Pool({
 });
 
 // Verificacion de conexion al iniciar
-pool.on('connect', () => console.log('Conectado a PostgreSQL en Neon.tech'));
-pool.on('error', (err) => console.error('Error de conexion:', err));
+pool.on('connect', () => console.log('🟢 Conectado a PostgreSQL en Neon.tech'));
+pool.on('error', (err) => console.error('🔴 Error de conexion:', err));
 
 
 module.exports = {

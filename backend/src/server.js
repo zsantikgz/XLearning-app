@@ -1,7 +1,7 @@
 const app = require('./app');
 const { pool } = require('./config/db');
 
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 5000;
 
 // Verificar conexion a DB antes de iniciar el servidor
 pool.query('SELECT NOW()')

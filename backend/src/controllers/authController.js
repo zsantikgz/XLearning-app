@@ -1,15 +1,16 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { query } = require('../config/db');
-const logger = require('../config/logger');
+const logger = require('../utils/logger');
 
 
 // LOGIN DE USUARIO
 exports.login = async (req, res) => {
-    const { email, password } = req.body;
+   
 
     try {
         // 1. Aqui se busca el usuario en la BD
+        const { email, password } = req.body;
         const { rows } = await query('SELECT * FROM USUARIOS WHERE EMAIL =$1', [email]);
         const usuario = rows[0];
 
@@ -19,7 +20,7 @@ exports.login = async (req, res) => {
     }
 
     // 2. Aqui se compara y valida contrasena
-    const contrasenaValida = await bcrypt.compare(contrasena, usuario.constrasena);
+    const contrasenaValida = await bcrypt.compare(password, usuario.contrasena); 
     if (!contrasenaValida) {
         logger.error(`Intento de login fallido: Contraseña incorrecta para ${email}`);
         return res.status(401).json({ error: 'Credenciales inválidas' });
@@ -41,8 +42,10 @@ exports.login = async (req, res) => {
         token,
         user: {
             id: usuario.id_usuario,
-            nombre: usuario.nombre,
             email: usuario.email,
+            nombre: usuario.nombre,
+            apellidos: usuario.apellidos,
+            matricula: usuario.matricula,
             tipo_usuario: usuario.tipo_usuario
         }
     });
@@ -55,18 +58,19 @@ exports.login = async (req, res) => {
 };
 
 // REGISTRO DE USUARIO
-exports.regitrar = async (req, res) => {
-    const { email, constrasena, nombre, tipo_usuario } = req.body;
+exports.registrar = async (req, res) => {
+    const { email, contrasena, nombre, apellidos, tipo_usuario, telefono, matricula} = req.body;
+    const tipoUsuario = tipo_usuario || 'ESTUDIANTE';
 
     try {
         // 1. HASH DE LA CONTRASENA
         const salt = await bcrypt.genSalt(10);
-        const contrasenaHash = await bcrypt.hash(constrasena, salt);
+        const contrasenaHash = await bcrypt.hash(contrasena, salt);
 
         // 2. Guardar usuario en la BD
         const { rows } = await query(
-            'INSERT INTO USUARIOS (EMAIL, CONTRASENA, NOMBRE, TIPO_USUARIO) VALUES$ ($1, $2, $3, $4) RETURNING *',
-            [email, contrasenaHash, nombre, tipo_usuario] || 'estudiante' // Hace que por defecto sea estudiante al registrarse para evitar que estudiantes se registren como profesores
+            'INSERT INTO USUARIOS (EMAIL, CONTRASENA, NOMBRE, APELLIDOS, TIPO_USUARIO, TELEFONO, MATRICULA) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+            [email, contrasenaHash, nombre, apellidos, tipoUsuario, telefono, matricula]
         );
 
         // 3. Generar token automaticamente tras el registro
@@ -82,6 +86,7 @@ exports.regitrar = async (req, res) => {
         });
 
     } catch (error) {
+        console.error('Error en registrar: ', error);
         if (error.code === '23505') { // ESTE NUMERO DE ERROR ES POR UN EMIAL DUPLICADO
             res.status(400).json({ error: 'El email ya fue registrado' });
         } else {
