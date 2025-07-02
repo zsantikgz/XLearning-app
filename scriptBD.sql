@@ -65,6 +65,10 @@ CREATE TABLE ASIGNACIONES (
     URL_ARCHIVO VARCHAR(255)
 );
 
+ALTER TABLE ASIGNACIONES
+ADD COLUMN ID_PROFESOR INT REFERENCES USUARIOS(ID_USUARIO);
+
+
 -- 7 ENTREGAS_ASIGNACIONES
 CREATE TABLE ENTREGAS_ASIGNACIONES (
     ID_ENTREGA SERIAL PRIMARY KEY,
@@ -83,6 +87,10 @@ CREATE TABLE CALIFICACIONES (
     COMENTARIO TEXT,
     FECHA_CALIFICACION TIMESTAMP DEFAULT NOW()
 );
+
+ALTER TABLE CALIFICACIONES
+ADD COLUMN VALOR_TOKENS INT DEFAULT 0 CHECK (VALOR_TOKENS >= 0);
+
 
 -- 9 TABLA EVENTOS (CALENDATIO ACADEMICO)
 CREATE TABLE EVENTOS (
@@ -114,6 +122,10 @@ CREATE TABLE RECOMPENSAS (
     ACTIVO BOOLEAN NOT NULL DEFAULT TRUE,
     FECHA_CREACION TIMESTAMP DEFAULT NOW()
 );
+
+ALTER TABLE RECOMPENSAS
+ADD COLUMN IMAGEN_URL VARCHAR(255);
+
 
 -- 12 TABLA USUARIO_TOKENS (SALDO DE TOKENS POR USUARIO)
 CREATE TABLE USUARIO_TOKENS (
@@ -152,7 +164,16 @@ CREATE TABLE CERTIFICACIONES (
     URL_DOCUMENTO VARCHAR (255)
 );
 
- 
+-- 16 TABLA CANJE RECOMPENSAS
+CREATE TABLE CANJE_RECOMPENSAS (
+    ID_CANJE SERIAL PRIMARY KEY,
+    ID_USUARIO INT NOT NULL REFERENCES USUARIOS(ID_USUARIO) ON DELETE CASCADE,
+    ID_RECOMPENSA INT NOT NULL REFERENCES RECOMPENSAS(ID_RECOMPENSA) ON DELETE CASCADE,
+    FECHA_CANJE TIMESTAMP DEFAULT NOW(),
+    ESTADO VARCHAR(20) DEFAULT 'PENDIENTE' CHECK (ESTADO IN ('PENDIENTE', 'ENTREGADO', 'CANCELADO')),
+    COMENTARIO TEXT
+);
+
 ---------------------- VISTAS ------------------------
 
 -- VISTA: RESUMEN ACADEMICO POR ESTUDIANTE
@@ -207,6 +228,51 @@ FROM EVENTOS E
 LEFT JOIN CLASES C ON E.ID_CLASE = C.ID_CLASE
 LEFT JOIN ASISTENCIA_EVENTOS AE ON E.ID_EVENTO = AE.ID_EVENTO
 GROUP BY E.ID_EVENTO, C.NOMBRE;
+
+
+CREATE OR REPLACE VIEW VISTA_CUADRO_HONOR AS
+SELECT 
+    u.id_usuario,
+    u.nombre || ' ' || u.apellidos AS estudiante,
+    ROUND(AVG(c.calificacion), 2) AS promedio_general,
+    COUNT(DISTINCT a.id_asignacion) AS total_asignaciones,
+    COUNT(c.id_calificacion) AS tareas_calificadas
+FROM usuarios u
+JOIN calificaciones c ON u.id_usuario = c.id_estudiante
+JOIN asignaciones a ON c.id_asignacion = a.id_asignacion
+WHERE u.tipo_usuario = 'ESTUDIANTE'
+GROUP BY u.id_usuario, u.nombre, u.apellidos
+ORDER BY promedio_general DESC;
+
+
+CREATE OR REPLACE VIEW VISTA_CUADRO_HONOR_GENERAL AS
+SELECT 
+    u.id_usuario,
+    u.nombre || ' ' || u.apellidos AS estudiante,
+    ROUND(AVG(c.calificacion), 2) AS promedio_general,
+    COUNT(c.id_calificacion) AS tareas_calificadas
+FROM usuarios u
+JOIN calificaciones c ON u.id_usuario = c.id_estudiante
+WHERE u.tipo_usuario = 'ESTUDIANTE'
+GROUP BY u.id_usuario, u.nombre, u.apellidos
+ORDER BY promedio_general DESC;
+
+
+CREATE OR REPLACE VIEW VISTA_CUADRO_HONOR_CLASE AS
+SELECT 
+    u.id_usuario,
+    a.id_clase,
+    cl.nombre AS clase,
+    u.nombre || ' ' || u.apellidos AS estudiante,
+    ROUND(AVG(c.calificacion), 2) AS promedio_clase,
+    COUNT(c.id_calificacion) AS tareas_calificadas
+FROM usuarios u
+JOIN calificaciones c ON u.id_usuario = c.id_estudiante
+JOIN asignaciones a ON c.id_asignacion = a.id_asignacion
+JOIN clases cl ON a.id_clase = cl.id_clase
+WHERE u.tipo_usuario = 'ESTUDIANTE'
+GROUP BY u.id_usuario, a.id_clase, cl.nombre, u.nombre, u.apellidos
+ORDER BY promedio_clase DESC;
 
 --------------------- TRIGGERS --------------------------
 -- VALIDAR FECHA DE ASISTENCIAS (NO FUTURAS)
@@ -326,6 +392,110 @@ CREATE TRIGGER TRIGGER_ACTUALIZAR_CLASES
 BEFORE UPDATE ON CLASES
 FOR EACH ROW
 EXECUTE FUNCTION ACTUALIZAR_CLASES
+
+
+CREATE OR REPLACE FUNCTION fn_otorgar_tokens_asistencia_evento()
+RETURNS TRIGGER AS $$
+DECLARE
+    tokens_evento INT;
+BEGIN
+    -- Solo otorgar tokens si la asistencia fue confirmada como TRUE
+    IF NEW.ASISTENCIA IS NOT TRUE THEN
+        RETURN NEW;
+    END IF;
+
+    -- Obtener tokens otorgados por el evento
+    SELECT TOKENS_OTORGADOS INTO tokens_evento
+    FROM EVENTOS
+    WHERE ID_EVENTO = NEW.ID_EVENTO;
+
+    -- Si el evento no existe o no otorga tokens, salir
+    IF tokens_evento IS NULL OR tokens_evento <= 0 THEN
+        RETURN NEW;
+    END IF;
+
+    -- Asegurar que el usuario tenga registro en USUARIO_TOKENS
+    INSERT INTO USUARIO_TOKENS (ID_USUARIO, BALANCE)
+    VALUES (NEW.ID_USUARIO, 0)
+    ON CONFLICT (ID_USUARIO) DO NOTHING;
+
+    -- Registrar transacción
+    INSERT INTO TRANSACCION_TOKENS (
+        ID_USUARIO,
+        MONTO,
+        TIPO,
+        ID_REFERENCIA,
+        TIPO_REFERENCIA
+    ) VALUES (
+        NEW.ID_USUARIO,
+        tokens_evento,
+        'GANADO',
+        NEW.ID_EVENTO,
+        'EVENTO'
+    );
+
+    -- Actualizar el balance
+    UPDATE USUARIO_TOKENS
+    SET BALANCE = BALANCE + tokens_evento,
+        ULTIMA_ACTUALIZACION = NOW()
+    WHERE ID_USUARIO = NEW.ID_USUARIO;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER trg_otorgar_tokens_asistencia
+AFTER INSERT ON ASISTENCIA_EVENTOS
+FOR EACH ROW
+EXECUTE FUNCTION fn_otorgar_tokens_asistencia_evento();
+
+
+
+CREATE OR REPLACE FUNCTION fn_otorgar_tokens_por_calificacion()
+RETURNS TRIGGER AS $$
+DECLARE
+    tokens INT := 0;
+BEGIN
+    -- Obtener los tokens otorgados por esta calificación
+    tokens := NEW.VALOR_TOKENS;
+
+    -- Si no hay tokens que otorgar, salir
+    IF tokens IS NULL OR tokens <= 0 THEN
+        RETURN NEW;
+    END IF;
+
+    -- Asegurar que el estudiante tenga entrada en USUARIO_TOKENS
+    INSERT INTO USUARIO_TOKENS (ID_USUARIO, BALANCE)
+    VALUES (NEW.ID_ESTUDIANTE, 0)
+    ON CONFLICT (ID_USUARIO) DO NOTHING;
+
+    -- Registrar la transacción
+    INSERT INTO TRANSACCION_TOKENS (
+        ID_USUARIO, MONTO, TIPO, ID_REFERENCIA, TIPO_REFERENCIA
+    ) VALUES (
+        NEW.ID_ESTUDIANTE,
+        tokens,
+        'GANADO',
+        NEW.ID_CALIFICACION,
+        'CALIFICACION'
+    );
+
+    -- Actualizar el balance
+    UPDATE USUARIO_TOKENS
+    SET BALANCE = BALANCE + tokens,
+        ULTIMA_ACTUALIZACION = NOW()
+    WHERE ID_USUARIO = NEW.ID_ESTUDIANTE;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER trg_otorgar_tokens_por_calificacion
+AFTER INSERT ON CALIFICACIONES
+FOR EACH ROW
+EXECUTE FUNCTION fn_otorgar_tokens_por_calificacion();
 
 ---------------- PROCEDIMIENTOS ---------------------------
 
