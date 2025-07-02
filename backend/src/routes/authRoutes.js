@@ -8,4 +8,7 @@ router.post('/login', authController.login);
 // POST /api/auth/registrar
 router.post('/registrar', authController.registrar);
 
+// POST /api/auth/login-profesor
+router.post('/login-profesor', authController.loginProfesor);
+
 module.exports = router;
