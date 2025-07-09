@@ -3,19 +3,20 @@ const router = express.Router();
 const anuncioController = require('../controllers/anuncioController');
 const { authenticateJWT } = require('../middlewares/authMiddleware');
 
-// Crear anuncio
+// POST
 router.post('/', authenticateJWT, anuncioController.crearAnuncio);
 
-// Obtener todos los anuncios
+// GETs
 router.get('/', authenticateJWT, anuncioController.obtenerTodosAnuncios);
-
-// Obtener anuncios por clase
+router.get('/:id', authenticateJWT, anuncioController.obtenerAnuncioPorId);
 router.get('/clase/:idClase', authenticateJWT, anuncioController.obtenerAnunciosPorClase);
+router.get('/tipo/:tipo', authenticateJWT, anuncioController.obtenerAnunciosPorTipo);
+router.get('/clase/:idClase/tipo/:tipo', authenticateJWT, anuncioController.obtenerAnunciosPorClaseYTipo);
 
-// Editar anuncio 
+// PUT
 router.put('/:id', authenticateJWT, anuncioController.editarAnuncio);
 
-// Eliminar anuncio 
+// DELETE
 router.delete('/:id', authenticateJWT, anuncioController.eliminarAnuncio);
 
 module.exports = router;

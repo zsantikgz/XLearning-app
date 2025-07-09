@@ -1,15 +1,32 @@
 const { query } = require('../config/db');
 const logger = require('../utils/logger');
 
-// Crear evento
 exports.crearEvento = async (req, res) => {
-    const { titulo, descripcion, tiempo_inicio, tiempo_termino, id_clase, creado_por, tokens_otorgados } = req.body;
+    const {
+        titulo,
+        descripcion,
+        tiempo_inicio,
+        tiempo_termino,
+        id_clase,
+        creado_por,
+        tokens_otorgados,
+        url_evento
+    } = req.body;
 
     try {
         const { rows } = await query(
-            `INSERT INTO EVENTOS (TITULO, DESCRIPCION, TIEMPO_INICIO, TIEMPO_TERMINO, ID_CLASE, CREADO_POR, TOKENS_OTORGADOS)
-             VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-            [titulo, descripcion, tiempo_inicio, tiempo_termino, id_clase, creado_por, tokens_otorgados || 0]
+            `INSERT INTO EVENTOS (TITULO, DESCRIPCION, TIEMPO_INICIO, TIEMPO_TERMINO, ID_CLASE, CREADO_POR, TOKENS_OTORGADOS, URL_EVENTO)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+            [
+                titulo,
+                descripcion,
+                tiempo_inicio,
+                tiempo_termino,
+                id_clase,
+                creado_por,
+                tokens_otorgados || 0,
+                url_evento || null
+            ]
         );
 
         res.status(201).json(rows[0]);
@@ -18,6 +35,7 @@ exports.crearEvento = async (req, res) => {
         res.status(500).json({ error: 'Error al crear evento' });
     }
 };
+
 
 // Obtener todos
 exports.obtenerEventos = async (req, res) => {
@@ -87,14 +105,34 @@ exports.obtenerEventosPorCreador = async (req, res) => {
 // Editar
 exports.editarEvento = async (req, res) => {
     const { id } = req.params;
-    const { titulo, descripcion, tiempo_inicio, tiempo_termino, tokens_otorgados } = req.body;
+    const {
+        titulo,
+        descripcion,
+        tiempo_inicio,
+        tiempo_termino,
+        tokens_otorgados,
+        url_evento
+    } = req.body;
 
     try {
         const result = await query(
             `UPDATE EVENTOS 
-             SET TITULO = $1, DESCRIPCION = $2, TIEMPO_INICIO = $3, TIEMPO_TERMINO = $4, TOKENS_OTORGADOS = $5
-             WHERE ID_EVENTO = $6 RETURNING *`,
-            [titulo, descripcion, tiempo_inicio, tiempo_termino, tokens_otorgados, id]
+             SET TITULO = $1,
+                 DESCRIPCION = $2,
+                 TIEMPO_INICIO = $3,
+                 TIEMPO_TERMINO = $4,
+                 TOKENS_OTORGADOS = $5,
+                 URL_EVENTO = $6
+             WHERE ID_EVENTO = $7 RETURNING *`,
+            [
+                titulo,
+                descripcion,
+                tiempo_inicio,
+                tiempo_termino,
+                tokens_otorgados,
+                url_evento || null,
+                id
+            ]
         );
 
         if (result.rows.length === 0) {
@@ -107,6 +145,7 @@ exports.editarEvento = async (req, res) => {
         res.status(500).json({ error: 'Error al actualizar evento' });
     }
 };
+
 
 // Eliminar
 exports.eliminarEvento = async (req, res) => {

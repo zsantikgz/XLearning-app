@@ -3,15 +3,14 @@ const logger = require('../utils/logger');
 
 // Crear anuncio
 exports.crearAnuncio = async (req, res) => {
-    const { id_clase, titulo, descripcion } = req.body;
+    const { id_clase, titulo, descripcion, dirigido_a } = req.body;
 
     try {
         const { rows } = await query(
-            `INSERT INTO ANUNCIOS (ID_CLASE, TITULO, DESCRIPCION) 
-             VALUES ($1, $2, $3) RETURNING *`,
-            [id_clase, titulo, descripcion]
+            `INSERT INTO ANUNCIOS (ID_CLASE, TITULO, DESCRIPCION, DIRIGIDO_A) 
+             VALUES ($1, $2, $3, $4) RETURNING *`,
+            [id_clase, titulo, descripcion, dirigido_a || 'TODOS']
         );
-
         res.status(201).json(rows[0]);
     } catch (error) {
         logger.error('Error al crear anuncio:', error);
@@ -19,7 +18,7 @@ exports.crearAnuncio = async (req, res) => {
     }
 };
 
-// Obtener todos los anuncios
+// Obtener todos
 exports.obtenerTodosAnuncios = async (req, res) => {
     try {
         const result = await query('SELECT * FROM ANUNCIOS ORDER BY FECHA_CREACION DESC');
@@ -30,10 +29,24 @@ exports.obtenerTodosAnuncios = async (req, res) => {
     }
 };
 
-// Obtener anuncios por clase
+// Obtener por ID
+exports.obtenerAnuncioPorId = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await query('SELECT * FROM ANUNCIOS WHERE ID_ANUNCIO = $1', [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Anuncio no encontrado' });
+        }
+        res.status(200).json(result.rows[0]);
+    } catch (error) {
+        logger.error('Error al obtener anuncio:', error);
+        res.status(500).json({ error: 'Error al obtener anuncio por ID' });
+    }
+};
+
+// Obtener por clase
 exports.obtenerAnunciosPorClase = async (req, res) => {
     const { idClase } = req.params;
-
     try {
         const result = await query(
             'SELECT * FROM ANUNCIOS WHERE ID_CLASE = $1 ORDER BY FECHA_CREACION DESC',
@@ -46,19 +59,48 @@ exports.obtenerAnunciosPorClase = async (req, res) => {
     }
 };
 
-// Editar anuncio
+// Obtener por tipo
+exports.obtenerAnunciosPorTipo = async (req, res) => {
+    const { tipo } = req.params;
+    try {
+        const result = await query(
+            'SELECT * FROM ANUNCIOS WHERE DIRIGIDO_A = $1 ORDER BY FECHA_CREACION DESC',
+            [tipo.toUpperCase()]
+        );
+        res.status(200).json(result.rows);
+    } catch (error) {
+        logger.error('Error al obtener anuncios por tipo:', error);
+        res.status(500).json({ error: 'Error al obtener anuncios por tipo' });
+    }
+};
+
+// Obtener por clase y tipo
+exports.obtenerAnunciosPorClaseYTipo = async (req, res) => {
+    const { idClase, tipo } = req.params;
+    try {
+        const result = await query(
+            `SELECT * FROM ANUNCIOS WHERE ID_CLASE = $1 AND DIRIGIDO_A = $2 ORDER BY FECHA_CREACION DESC`,
+            [idClase, tipo.toUpperCase()]
+        );
+        res.status(200).json(result.rows);
+    } catch (error) {
+        logger.error('Error al obtener anuncios por clase y tipo:', error);
+        res.status(500).json({ error: 'Error al obtener anuncios por clase y tipo' });
+    }
+};
+
+// Editar
 exports.editarAnuncio = async (req, res) => {
     const { id } = req.params;
-    const { titulo, descripcion } = req.body;
+    const { titulo, descripcion, dirigido_a } = req.body;
 
     try {
         const result = await query(
             `UPDATE ANUNCIOS 
-             SET TITULO = $1, DESCRIPCION = $2 
-             WHERE ID_ANUNCIO = $3 RETURNING *`,
-            [titulo, descripcion, id]
+             SET TITULO = $1, DESCRIPCION = $2, DIRIGIDO_A = $3
+             WHERE ID_ANUNCIO = $4 RETURNING *`,
+            [titulo, descripcion, dirigido_a || 'TODOS', id]
         );
-
         res.status(200).json({ mensaje: 'Anuncio actualizado', anuncio: result.rows[0] });
     } catch (error) {
         logger.error('Error al editar anuncio:', error);
@@ -66,10 +108,9 @@ exports.editarAnuncio = async (req, res) => {
     }
 };
 
-// Eliminar anuncio
+// Eliminar
 exports.eliminarAnuncio = async (req, res) => {
     const { id } = req.params;
-
     try {
         await query('DELETE FROM ANUNCIOS WHERE ID_ANUNCIO = $1', [id]);
         res.status(200).json({ mensaje: 'Anuncio eliminado' });

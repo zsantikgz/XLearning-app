@@ -35,6 +35,8 @@ const notificacionRoutes = require('./routes/notificacionRoutes');
 const mensajeRoutes = require('./routes/mensajeRoutes');
 const vistaRoutes = require('./routes/vistaRoutes');
 const notificacionPushRoutes = require('./routes/notificacionPushRoutes');
+const canjeRoutes = require('./routes/canjeRoutes');
+const usuarioTokensRoutes = require('./routes/usuarioTokensRoutes');
 
 
 
@@ -59,6 +61,8 @@ app.use('/api/notificaciones', notificacionRoutes);
 app.use('/api/mensajes', mensajeRoutes);
 app.use('/api/vistas', vistaRoutes);
 app.use('/api/notificaciones', notificacionPushRoutes);
+app.use('/api/canjes', canjeRoutes);
+app.use('/api/usuario-tokens', usuarioTokensRoutes);
 
 
 
