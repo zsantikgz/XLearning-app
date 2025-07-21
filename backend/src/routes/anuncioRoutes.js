@@ -12,6 +12,9 @@ router.get('/:id', authenticateJWT, anuncioController.obtenerAnuncioPorId);
 router.get('/clase/:idClase', authenticateJWT, anuncioController.obtenerAnunciosPorClase);
 router.get('/tipo/:tipo', authenticateJWT, anuncioController.obtenerAnunciosPorTipo);
 router.get('/clase/:idClase/tipo/:tipo', authenticateJWT, anuncioController.obtenerAnunciosPorClaseYTipo);
+router.get('/importancia/:importancia', authenticateJWT, anuncioController.obtenerAnunciosPorImportancia);
+router.get('/clase/:idClase/tipo/:tipo/importancia/:importancia', authenticateJWT, anuncioController.obtenerAnunciosPorClaseTipoEImportancia);
+
 
 // PUT
 router.put('/:id', authenticateJWT, anuncioController.editarAnuncio);

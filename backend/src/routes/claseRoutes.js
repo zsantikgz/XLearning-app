@@ -18,5 +18,8 @@ router.put('/:id', authenticateJWT, claseController.putClase);
 // Obtener clases por ID de profesor
 router.get('/profesor/:idProfesor', authenticateJWT, claseController.getClasesPorProfesor);
 
+// Obtener clases por ID de estudiante
+router.get('/estudiante/:idEstudiante', authenticateJWT, claseController.getClasesByEstudianteId);
+
 
 module.exports = router;

@@ -104,6 +104,42 @@ exports.getClasesPorProfesor = async (req, res) => {
     }
 };
 
+// Obtener clases por profesor
+exports.getClasesPorProfesor = async (req, res) => {
+    const { idProfesor } = req.params;
+
+    try {
+        const result = await query(
+            'SELECT * FROM CLASES WHERE ID_PROFESOR = $1 ORDER BY FECHA_CREACION DESC',
+            [idProfesor]
+        );
+
+        res.status(200).json(result.rows);
+    } catch (error) {
+        logger.error('Error al obtener clases por profesor:', error);
+        res.status(500).json({ error: 'Error al obtener clases del profesor' });
+    }
+};
+
+
+// Obtener clases por estudiante
+exports.getClasesByEstudianteId = async (req, res) => {
+    const { idEstudiante } = req.params;
+    try {
+        const result = await query(
+            `SELECT C.*
+             FROM ESTUDIANTES_CLASES EC
+             JOIN CLASES C ON EC.ID_CLASE = C.ID_CLASE
+             WHERE EC.ID_ESTUDIANTE = $1`,
+            [idEstudiante]
+        );
+        res.status(200).json(result.rows);
+    } catch (error) {
+        logger.error('Error al obtener clases del estudiante: ', error);
+        res.status(500).json({ error: 'Error al obtener clases del estudiante' });
+    }
+};
+
 
 // proximo DELETE clase
 // exports.deletClase = async (req, res) => {

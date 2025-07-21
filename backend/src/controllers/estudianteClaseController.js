@@ -69,7 +69,13 @@ exports.getEstudiantesByClaseId = async (req, res) => {
     const { id_clase } = req.params;
     try {
         const result = await query(
-            'SELECT * FROM ESTUDIANTES_CLASES WHERE ID_CLASE = $1',
+            `SELECT 
+                ec.*, 
+                u.nombre, 
+                u.apellidos 
+             FROM ESTUDIANTES_CLASES ec
+             JOIN USUARIOS u ON ec.ID_ESTUDIANTE = u.ID_USUARIO
+             WHERE ec.ID_CLASE = $1`,
             [id_clase]
         );
         res.status(200).json(result.rows);
@@ -78,6 +84,7 @@ exports.getEstudiantesByClaseId = async (req, res) => {
         res.status(500).json({ error: 'Error al obtener estudiantes de la clase' });
     }
 };
+
 
 
 exports.updateEstudianteClase = async (req, res) => {

@@ -21,25 +21,23 @@ exports.crearNotificacion = async (req, res) => {
 };
 
 exports.obtenerNotificacionesPorUsuario = async (req, res) => {
-    const { idUsuario } = req.params;
-
-    try {
-        // ✅ Convertir idUsuario a número
-        const idUsuarioNumber = Number(idUsuario);
-
-        console.log("Buscando para_usuario:", idUsuarioNumber);
-
-        const snapshot = await db.collection('notificaciones')
-            .where('para_usuario', '==', idUsuarioNumber)
-            .get();
-
-        const notificaciones = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-        res.status(200).json(notificaciones);
-    } catch (error) {
-        logger.error('Error al obtener notificaciones por usuario:', error);
-        res.status(500).json({ error: 'Error al obtener notificaciones' });
-    }
+  const { id_clase } = req.params;
+  try {
+      const result = await query(
+          `SELECT 
+              ec.*, 
+              u.nombre, 
+              u.apellidos 
+           FROM ESTUDIANTES_CLASES ec
+           JOIN USUARIOS u ON ec.ID_ESTUDIANTE = u.ID_USUARIO
+           WHERE ec.ID_CLASE = $1`,
+          [id_clase]
+      );
+      res.status(200).json(result.rows);
+  } catch (error) {
+      logger.error('Error al obtener estudiantes de la clase: ', error);
+      res.status(500).json({ error: 'Error al obtener estudiantes de la clase' });
+  }
 };
 
 // obtener todas las notificaciones
