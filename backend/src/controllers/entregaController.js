@@ -74,6 +74,87 @@ exports.obtenerPorAsignacion = async (req, res) => {
     }
 };
 
+// GET por clase
+exports.obtenerPorClase = async (req, res) => {
+    const { idClase } = req.params;
+    try {
+        const result = await query(
+            `SELECT ea.* 
+             FROM ENTREGAS_ASIGNACIONES ea
+             INNER JOIN ASIGNACIONES a ON ea.ID_ASIGNACION = a.ID_ASIGNACION
+             WHERE a.ID_CLASE = $1
+             ORDER BY ea.FECHA_ENTREGA DESC`,
+            [idClase]
+        );
+
+        res.status(200).json(result.rows);
+    } catch (error) {
+        logger.error('Error al obtener entregas por clase:', error);
+        res.status(500).json({ error: 'Error al obtener entregas por clase' });
+    }
+};
+
+// GET por clase y asignación
+exports.obtenerPorClaseYAsignacion = async (req, res) => {
+    const { idClase, idAsignacion } = req.params;
+
+    try {
+        const result = await query(
+            `SELECT ea.* 
+             FROM ENTREGAS_ASIGNACIONES ea
+             INNER JOIN ASIGNACIONES a ON ea.ID_ASIGNACION = a.ID_ASIGNACION
+             WHERE a.ID_CLASE = $1 AND ea.ID_ASIGNACION = $2
+             ORDER BY ea.FECHA_ENTREGA DESC`,
+            [idClase, idAsignacion]
+        );
+
+        res.status(200).json(result.rows);
+    } catch (error) {
+        logger.error('Error al obtener entregas por clase y asignación:', error);
+        res.status(500).json({ error: 'Error al obtener entregas por clase y asignación' });
+    }
+};
+
+
+exports.obtenerResumenEntregasPorClase = async (req, res) => {
+    const { idClase } = req.params;
+
+    try {
+        const result = await query(
+            `SELECT 
+                u.id_usuario AS id_estudiante,
+                u.nombre,
+                u.apellidos,
+                c.id_clase,
+                c.nombre AS clase,
+                a.id_asignacion,
+                a.titulo AS actividad,
+                ea.id_entrega IS NOT NULL AS entregado,
+                cal.calificacion,
+                cal.valor_tokens
+            FROM ESTUDIANTES_CLASES ec
+            JOIN USUARIOS u ON ec.id_estudiante = u.id_usuario
+            JOIN CLASES c ON ec.id_clase = c.id_clase
+            JOIN ASIGNACIONES a ON c.id_clase = a.id_clase
+            LEFT JOIN ENTREGAS_ASIGNACIONES ea 
+                ON a.id_asignacion = ea.id_asignacion AND ea.id_estudiante = u.id_usuario
+            LEFT JOIN CALIFICACIONES cal 
+                ON a.id_asignacion = cal.id_asignacion AND cal.id_estudiante = u.id_usuario
+            WHERE c.id_clase = $1
+            ORDER BY u.apellidos, u.nombre, a.fecha_entrega`,
+            [idClase]
+        );
+
+        res.status(200).json(result.rows);
+    } catch (error) {
+        logger.error('Error al obtener resumen de entregas por clase:', error);
+        res.status(500).json({ error: 'Error al obtener resumen' });
+    }
+};
+
+
+
+
 // DELETE
 exports.eliminarEntrega = async (req, res) => {
     const { id } = req.params;

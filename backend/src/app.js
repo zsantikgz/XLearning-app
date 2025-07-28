@@ -32,14 +32,14 @@ const eventoRoutes = require('./routes/eventoRoutes');
 const asistenciaEventoRoutes = require('./routes/asistenciaEventoRoutes');
 const certificacionRoutes = require('./routes/certificacionRoutes');
 const notificacionRoutes = require('./routes/notificacionRoutes');
-const mensajeRoutes = require('./routes/mensajeRoutes');
+// const mensajeRoutes = require('./routes/mensajeRoutes');
 const vistaRoutes = require('./routes/vistaRoutes');
 const notificacionPushRoutes = require('./routes/notificacionPushRoutes');
 const canjeRoutes = require('./routes/canjeRoutes');
 const usuarioTokensRoutes = require('./routes/usuarioTokensRoutes');
 const notificacionEstudianteRoutes = require('./routes/notificacionEstudianteRoutes');
-
-
+const mensajesRoutes = require('./routes/mensajesRoutes');
+const felicitacionesRoutes = require('./routes/felicitacionesRoutes');
 
 
 // Rutas base
@@ -59,13 +59,14 @@ app.use('/api/eventos', eventoRoutes);
 app.use('/api/asistencia-eventos', asistenciaEventoRoutes);
 app.use('/api/certificaciones', certificacionRoutes);
 app.use('/api/notificaciones', notificacionRoutes);
-app.use('/api/mensajes', mensajeRoutes);
+// app.use('/api/mensajes', mensajeRoutes);
 app.use('/api/vistas', vistaRoutes);
 app.use('/api/notificaciones', notificacionPushRoutes);
 app.use('/api/canjes', canjeRoutes);
 app.use('/api/usuario-tokens', usuarioTokensRoutes);
 app.use('/api/notificaciones-estudiantes', notificacionEstudianteRoutes);
-
+app.use('/api/mensajes', mensajesRoutes);
+app.use('/api/felicitaciones', felicitacionesRoutes);
 
 
 // Middleware de manejo de errores

@@ -15,6 +15,16 @@ router.get('/estudiante/:idEstudiante', authenticateJWT, entregaController.obten
 // Obtener entregas por asignación
 router.get('/asignacion/:idAsignacion', authenticateJWT, entregaController.obtenerPorAsignacion);
 
+// Obtener entregas por clase
+router.get('/clase/:idClase', entregaController.obtenerPorClase);
+
+// Obtener entregas por clase y asignación
+router.get('/clase/:idClase/asignacion/:idAsignacion', entregaController.obtenerPorClaseYAsignacion);
+
+// Resumen de entregas por clase
+router.get('/resumen/clase/:idClase', entregaController.obtenerResumenEntregasPorClase);
+
+
 // Eliminar entrega (opcional)
 router.delete('/:id', authenticateJWT, entregaController.eliminarEntrega);
 
